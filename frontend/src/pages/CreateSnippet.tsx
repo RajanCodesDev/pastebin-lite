@@ -20,7 +20,7 @@ export function CreateSnippet() {
     setErrorMsg('')
     try {
       const snippet = await createSnippet({ content })
-      const url = `${window.location.origin}/s/${snippet.slug}`
+      const url = `/s/${snippet.slug}`
       setResult({ slug: snippet.slug, url })
       setContent('')
       setState('success')

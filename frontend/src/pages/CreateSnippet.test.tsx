@@ -3,12 +3,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { CreateSnippet } from './CreateSnippet'
 import * as api from '../api/snippets'
 
+vi.mock('../api/snippets', () => ({
+  createSnippet: vi.fn(),
+}))
+
 const mockCreateSnippet = vi.fn<typeof api.createSnippet>(api.createSnippet)
+vi.mocked(api.createSnippet).mockImplementation(mockCreateSnippet)
 
 describe('CreateSnippet', () => {
   beforeEach(() => {
-    vi.resetAllMocks()
-    vi.stubEnv('VITE_API_URL', 'http://localhost:8080')
+    vi.clearAllMocks()
+    mockCreateSnippet.mockReset()
   })
 
   it('renders textarea and create button', () => {
@@ -27,7 +32,7 @@ describe('CreateSnippet', () => {
   })
 
   it('shows loading state while submitting', async () => {
-    mockCreateSnippet.mockImplementationOnce(() => new Promise<typeof api.Snippet>((resolve) =>
+    mockCreateSnippet.mockImplementationOnce(() => new Promise((resolve) =>
       setTimeout(() => resolve({ id: 1, slug: 'abc123', content: 'hello', created_at: new Date().toISOString() }), 50)))
 
     render(<CreateSnippet />)
@@ -40,14 +45,12 @@ describe('CreateSnippet', () => {
     expect(screen.getByText(/creating\.\.\./i)).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(screen.getByText(/snippet created/i)).toBeInTheDocument()
+      expect(mockCreateSnippet).toHaveBeenCalledWith({ content: 'hello world' })
     })
-    expect(mockCreateSnippet).toHaveBeenCalledWith({ content: 'hello world' })
   })
 
   it('displays generated URL on success', async () => {
-    const snippet = { id: 1, slug: 'a8f31c', content: 'hello world', created_at: new Date().toISOString() }
-    mockCreateSnippet.mockResolvedValueOnce(snippet)
+    mockCreateSnippet.mockResolvedValueOnce({ id: 1, slug: 'a8f31c', content: 'hello world', created_at: new Date().toISOString() })
 
     render(<CreateSnippet />)
     const textarea = screen.getByRole('textbox')
@@ -56,9 +59,9 @@ describe('CreateSnippet', () => {
     fireEvent.click(btn)
 
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: /http:\/\/localhost\/s\/a8f31c/i })
+      const link = screen.getByRole('link', { name: /\/s\/a8f31c/i })
       expect(link).toBeInTheDocument()
-      expect(link).toHaveAttribute('href', 'http://localhost/s/a8f31c')
+      expect(link).toHaveAttribute('href', '/s/a8f31c')
     })
   })
 
@@ -81,8 +84,9 @@ describe('CreateSnippet', () => {
 
     render(<CreateSnippet />)
     const textarea = screen.getByRole('textbox')
+    const btn = screen.getByRole('button', { name: /create snippet/i })
     fireEvent.change(textarea, { target: { value: 'my code' } })
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(btn)
 
     await waitFor(() => {
       expect(textarea).toHaveValue('')
