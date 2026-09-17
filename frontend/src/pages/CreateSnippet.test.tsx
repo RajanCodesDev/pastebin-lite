@@ -50,6 +50,10 @@ describe('CreateSnippet', () => {
   })
 
   it('displays generated URL on success', async () => {
+    Object.defineProperty(window, 'location', {
+      value: { origin: 'http://localhost:5173' },
+      writable: false,
+    })
     mockCreateSnippet.mockResolvedValueOnce({ id: 1, slug: 'a8f31c', content: 'hello world', created_at: new Date().toISOString() })
 
     render(<CreateSnippet />)
@@ -59,9 +63,9 @@ describe('CreateSnippet', () => {
     fireEvent.click(btn)
 
     await waitFor(() => {
-      const link = screen.getByRole('link', { name: /\/s\/a8f31c/i })
+      const link = screen.getByRole('link', { name: /http:\/\/localhost:5173\/s\/a8f31c/i })
       expect(link).toBeInTheDocument()
-      expect(link).toHaveAttribute('href', '/s/a8f31c')
+      expect(link).toHaveAttribute('href', 'http://localhost:5173/s/a8f31c')
     })
   })
 
