@@ -75,20 +75,53 @@ jobs:
         run: npm run build
 
 
-  docker:
-    name: Docker Build
-    runs-on: ubuntu-latest
+    docker:
+      name: Docker Build & Push
+      runs-on: ubuntu-latest
 
-    needs:
-      - backend
-      - frontend
+      needs:
+        - backend
+        - frontend
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      permissions:
+        contents: read
+        packages: write
 
-      - name: Build backend image
-        run: docker build -t pastebin-backend:ci ./backend
+      steps:
+        - name: Checkout
+          uses: actions/checkout@v4
 
-      - name: Build frontend image
-        run: docker build -t pastebin-frontend:ci ./frontend
+        - name: Log in to GHCR
+          uses: docker/login-action@v3
+          with:
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
+
+        - name: Set image name
+          run: |
+            echo "IMAGE_PREFIX=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_ENV"
+
+        - name: Build backend image
+          run: |
+            docker build \
+              -t $IMAGE_PREFIX/pastebin-backend:${GITHUB_SHA} \
+              -t $IMAGE_PREFIX/pastebin-backend:latest \
+              ./backend
+
+        - name: Build frontend image
+          run: |
+            docker build \
+              -t $IMAGE_PREFIX/pastebin-frontend:${GITHUB_SHA} \
+              -t $IMAGE_PREFIX/pastebin-frontend:latest \
+              ./frontend
+
+        - name: Push backend image
+          run: |
+            docker push $IMAGE_PREFIX/pastebin-backend:${GITHUB_SHA}
+            docker push $IMAGE_PREFIX/pastebin-backend:latest
+
+        - name: Push frontend image
+          run: |
+            docker push $IMAGE_PREFIX/pastebin-frontend:${GITHUB_SHA}
+            docker push $IMAGE_PREFIX/pastebin-frontend:latest
